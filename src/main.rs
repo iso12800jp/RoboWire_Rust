@@ -256,7 +256,7 @@ fn cal_matrix_unit() -> [[f64; 4]; 4]{
         result_matrix[i][i] = 1f64;
     }
     
-    return result_matrix;
+    result_matrix
 }
 
 fn cal_matrix(matrix_a: &[[f64; 4]; 4], matrix_b: &[[f64; 4]; 4]) -> [[f64; 4]; 4] {
@@ -270,7 +270,7 @@ fn cal_matrix(matrix_a: &[[f64; 4]; 4], matrix_b: &[[f64; 4]; 4]) -> [[f64; 4]; 
         }
     }
 
-    return result_matrix;
+    result_matrix
 }
 
 fn cal_pos(matrix_a: &[[f64; 4]; 4], pos: &Pos) -> Pos {
