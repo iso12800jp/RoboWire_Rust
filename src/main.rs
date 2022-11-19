@@ -48,14 +48,14 @@ struct Stl {
     normal_vec: Pos,
 }
 
-// impl Stl {
-//     fn new() -> Self {
-//         Stl { 
-//             pos: [Pos::new(), Pos::new(), Pos::new()],
-//             normal_vec: Pos::new()
-//         }
-//     }
-// }
+impl Stl {
+    fn new() -> Self {
+        Stl { 
+            pos: [Pos::new(), Pos::new(), Pos::new()],
+            normal_vec: Pos::new()
+        }
+    }
+}
 
 struct StlModel {
     n_stl_num: u64,
@@ -115,37 +115,29 @@ fn read_poly(path: &str) -> StlModel {
     };
     buf.clear();
 
-    for _ in 0..stl_model.n_stl_num {
-        // while file_reader.read_line(&mut buf).unwrap() != 0 {
-        // let buf_repcale_space = buf.trim().replace(" ", ",");i
-        let mut tmp: Vec<Vec<f64>> = Vec::new();
-        for _ in 0..4 {
-            let mut buf = String::new();
+    for i in 0..stl_model.n_stl_num as usize {
+        stl_model.stl.push(Stl::new());
+        for j in 0..4 {
             if file_reader.read_line(&mut buf).unwrap() == 0 {
-                panic!("ポリゴン数と実際のデータ数が不一致");
+                panic!()
             }
-            tmp.push(buf.split(',').map(|s| s.trim().parse::<f64>().unwrap()).collect());
+            let tmp: Vec<f64> = buf.split(',').map(|s| s.trim().parse::<f64>().unwrap()).collect();
+            let tmp_pos = Pos {
+                x: tmp[0],
+                y: tmp[1],
+                z: tmp[2],
+                w: 1f64,
+            };
+            match j {
+                0 => stl_model.stl[i].normal_vec = tmp_pos,
+                1 | 2 | 3 => {
+                    stl_model.stl[i].pos[j - 1] = tmp_pos;
+                },
+                _ => panic!()
+            }
+            buf.clear();
         }
-
-        // println!("{:?}", tmp);
-        // let mut tmp: Vec<Vec<f64>> = Vec::new();
-        // &strからf64に変換したベクタをコピー
-        // for i in 0..tmp.len() {
-        //     tmp.push(tmp[i].iter().map(|a| a.trim().parse::<f64>().unwrap()).collect())
-        // }
-        stl_model.stl.push(
-            Stl {
-                pos: [
-                    Pos { x: tmp[1][0], y: tmp[1][1], z: tmp[1][2], w: 1f64 },
-                    Pos { x: tmp[2][0], y: tmp[2][1], z: tmp[2][2], w: 1f64 },
-                    Pos { x: tmp[3][0], y: tmp[3][1], z: tmp[3][2], w: 1f64 },
-                ],
-                normal_vec: Pos { x: tmp[0][0], y: tmp[0][1], z: tmp[0][2], w: 1f64 },
-            }
-        );
-        buf.clear();
     }
-    // }
 
     stl_model
 }
@@ -179,18 +171,15 @@ fn read_modeling(path: &str) -> ModelingRobo {
             if file_reader.read_line(&mut buf).unwrap() == 0 {
                 panic!()
             }
-            
-            let tmp: Vec<&str> = buf.trim().split(',').collect(); 
-            
-            // let tmp = buf.split(',').map(|s| s.to_string()).collect();
 
             match j {
                 0 => (),
                 1 | 2 | 3 => {
+                    let tmp: Vec<f64> = buf.split(',').map(|s| s.trim().parse::<f64>().unwrap()).collect();
                     let tmp_trans_param = TransParam {
-                        x: tmp[0].trim().parse::<f64>().unwrap(),
-                        y: tmp[1].trim().parse::<f64>().unwrap(),
-                        z: tmp[2].trim().parse::<f64>().unwrap(),
+                        x: tmp[0],
+                        y: tmp[1],
+                        z: tmp[2],
                     };
                     match j {
                         1 => d_scale = tmp_trans_param,
