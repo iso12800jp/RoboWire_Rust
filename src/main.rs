@@ -115,8 +115,8 @@ fn read_poly(path: &str) -> StlModel {
     };
     buf.clear();
 
-    for i in 0..stl_model.n_stl_num as usize {
-        stl_model.stl.push(Stl::new());
+    for _ in 0..stl_model.n_stl_num {
+        let mut tmp_stl = Stl::new();
         for j in 0..4 {
             if file_reader.read_line(&mut buf).unwrap() == 0 {
                 panic!()
@@ -129,14 +129,15 @@ fn read_poly(path: &str) -> StlModel {
                 w: 1f64,
             };
             match j {
-                0 => stl_model.stl[i].normal_vec = tmp_pos,
+                0 => tmp_stl.normal_vec = tmp_pos,
                 1 | 2 | 3 => {
-                    stl_model.stl[i].pos[j - 1] = tmp_pos;
+                    tmp_stl.pos[j - 1] = tmp_pos;
                 },
                 _ => panic!()
             }
             buf.clear();
         }
+        stl_model.stl.push(tmp_stl);
     }
 
     stl_model
@@ -163,7 +164,7 @@ fn read_modeling(path: &str) -> ModelingRobo {
     
     buf.clear();
 
-    for _i in 0..modeling_robo.n_trans_num {
+    for _ in 0..modeling_robo.n_trans_num {
         let mut d_scale = TransParam::new();
         let mut d_rotate = TransParam::new();
         let mut d_trans = TransParam::new();
