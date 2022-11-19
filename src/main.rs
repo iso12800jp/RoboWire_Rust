@@ -209,9 +209,9 @@ fn read_modeling(path: &str) -> ModelingRobo {
 
 fn shift(x: &f64, y: &f64, z: &f64) -> [[f64; 4]; 4] {
     let mut d_trans = cal_matrix_unit();
-    d_trans[0][3] = x.clone();
-    d_trans[1][3] = y.clone();
-    d_trans[2][3] = z.clone();
+    d_trans[0][3] = *x;
+    d_trans[1][3] = *y;
+    d_trans[2][3] = *z;
     d_trans
 }
 
@@ -244,9 +244,9 @@ fn rotate_x(x: &f64) -> [[f64; 4]; 4] {
 
 fn scale(x: &f64, y: &f64, z: &f64) -> [[f64; 4]; 4] {
     let mut d_scale = cal_matrix_unit();
-    d_scale[0][0] = x.clone();
-    d_scale[1][1] = y.clone();
-    d_scale[2][2] = z.clone();
+    d_scale[0][0] = *x;
+    d_scale[1][1] = *y;
+    d_scale[2][2] = *z;
     d_scale
 }
 
