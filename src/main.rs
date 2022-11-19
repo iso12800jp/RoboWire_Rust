@@ -118,30 +118,29 @@ fn read_poly(path: &str) -> StlModel {
     for _ in 0..stl_model.n_stl_num {
         // while file_reader.read_line(&mut buf).unwrap() != 0 {
         // let buf_repcale_space = buf.trim().replace(" ", ",");i
-        let mut tmp: Vec<Vec<String>> = Vec::new();
-
+        let mut tmp: Vec<Vec<f64>> = Vec::new();
         for _ in 0..4 {
             let mut buf = String::new();
             if file_reader.read_line(&mut buf).unwrap() == 0 {
                 panic!("ポリゴン数と実際のデータ数が不一致");
             }
-            tmp.push(buf.split(',').map(|s| s.to_string()).collect());  
+            tmp.push(buf.split(',').map(|s| s.trim().parse::<f64>().unwrap()).collect());
         }
 
         // println!("{:?}", tmp);
-        let mut tmp_f64: Vec<Vec<f64>> = Vec::new();
+        // let mut tmp: Vec<Vec<f64>> = Vec::new();
         // &strからf64に変換したベクタをコピー
-        for i in 0..tmp.len() {
-            tmp_f64.push(tmp[i].iter().map(|a| a.trim().parse::<f64>().unwrap()).collect())
-        }
+        // for i in 0..tmp.len() {
+        //     tmp.push(tmp[i].iter().map(|a| a.trim().parse::<f64>().unwrap()).collect())
+        // }
         stl_model.stl.push(
             Stl {
                 pos: [
-                    Pos { x: tmp_f64[1][0], y: tmp_f64[1][1], z: tmp_f64[1][2], w: 1f64 },
-                    Pos { x: tmp_f64[2][0], y: tmp_f64[2][1], z: tmp_f64[2][2], w: 1f64 },
-                    Pos { x: tmp_f64[3][0], y: tmp_f64[3][1], z: tmp_f64[3][2], w: 1f64 },
+                    Pos { x: tmp[1][0], y: tmp[1][1], z: tmp[1][2], w: 1f64 },
+                    Pos { x: tmp[2][0], y: tmp[2][1], z: tmp[2][2], w: 1f64 },
+                    Pos { x: tmp[3][0], y: tmp[3][1], z: tmp[3][2], w: 1f64 },
                 ],
-                normal_vec: Pos { x: tmp_f64[0][0], y: tmp_f64[0][1], z: tmp_f64[0][2], w: 1f64 },
+                normal_vec: Pos { x: tmp[0][0], y: tmp[0][1], z: tmp[0][2], w: 1f64 },
             }
         );
         buf.clear();
@@ -182,7 +181,9 @@ fn read_modeling(path: &str) -> ModelingRobo {
             }
             
             let tmp: Vec<&str> = buf.trim().split(',').collect(); 
-                    
+            
+            // let tmp = buf.split(',').map(|s| s.to_string()).collect();
+
             match j {
                 0 => (),
                 1 | 2 | 3 => {
