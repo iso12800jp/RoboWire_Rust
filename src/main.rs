@@ -5,10 +5,9 @@ use std::{
 
 fn main() {
     let stl_model = read_poly("./src/CylinderFlat.txt");
-    let mut modeling_robo = read_modeling("./src/modeling.txt");
-    modeling_transform(&stl_model, &mut modeling_robo);
+    let modeling_robo = read_modeling("./src/modeling.txt");
 
-    let modeling_robo = modeling_robo;
+    let modeling_robo = modeling_transform(&stl_model, modeling_robo);
 
     for i in 0..modeling_robo.robo_stl_model[5].n_stl_num as usize {
         let stl = &modeling_robo.robo_stl_model[5].stl;
@@ -342,7 +341,7 @@ fn cal_normal_vec(stl: &Stl) -> Pos {
     }
 }
 
-fn modeling_transform(stl_model: &StlModel, modeling_robo: &mut ModelingRobo) {
+fn modeling_transform(stl_model: &StlModel, mut modeling_robo: ModelingRobo) -> ModelingRobo {
     for i in 0..modeling_robo.n_trans_num as usize {
         modeling_robo.robo_stl_model.push(StlModel {
             n_stl_num: stl_model.n_stl_num,
@@ -397,4 +396,5 @@ fn modeling_transform(stl_model: &StlModel, modeling_robo: &mut ModelingRobo) {
                 cal_normal_vec(&modeling_robo.robo_stl_model[i].stl[j]);
         }
     }
+    modeling_robo
 }
