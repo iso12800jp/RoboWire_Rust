@@ -1,19 +1,25 @@
-use std::{fs::File, io::{BufReader, BufRead}};
+use std::{
+    fs::File,
+    io::{BufRead, BufReader},
+};
 
-fn main () {
-
-    let (stl_model, mut modeling_robo) = 
-        read_data("./src/CylinderFlat.txt", "./src/modeling.txt");
-
+fn main() {
+    let stl_model = read_poly("./src/CylinderFlat.txt");
+    let mut modeling_robo = read_modeling("./src/modeling.txt");
     modeling_transform(&stl_model, &mut modeling_robo);
+
+    let modeling_robo = modeling_robo;
 
     for i in 0..modeling_robo.robo_stl_model[5].n_stl_num as usize {
         let stl = &modeling_robo.robo_stl_model[5].stl;
         // let stl = &stl_model.stl;
         for j in 0..3 {
             // print!("{:8.4}, {:8.4}, {:8.4} -> ", stl[i].pos[j].x, stl[i].pos[j].y, stl[i].pos[j].z)
-            print!("{:8.4}, {:8.4}, {:8.4} -> ", stl[i].pos[j].x, stl[i].pos[j].y, stl[i].pos[j].z)
-        };
+            print!(
+                "{:8.4}, {:8.4}, {:8.4} -> ",
+                stl[i].pos[j].x, stl[i].pos[j].y, stl[i].pos[j].z
+            )
+        }
         println!("");
     }
 }
@@ -27,7 +33,12 @@ struct Pos {
 
 impl Pos {
     fn new() -> Self {
-        Pos { x: 0f64, y: 0f64, z: 0f64, w: 1f64 }
+        Pos {
+            x: 0f64,
+            y: 0f64,
+            z: 0f64,
+            w: 1f64,
+        }
     }
 }
 
@@ -39,7 +50,11 @@ struct TransParam {
 
 impl TransParam {
     fn new() -> Self {
-        TransParam { x: 0f64, y: 0f64, z: 0f64 }
+        TransParam {
+            x: 0f64,
+            y: 0f64,
+            z: 0f64,
+        }
     }
 }
 
@@ -50,9 +65,9 @@ struct Stl {
 
 impl Stl {
     fn new() -> Self {
-        Stl { 
+        Stl {
             pos: [Pos::new(), Pos::new(), Pos::new()],
-            normal_vec: Pos::new()
+            normal_vec: Pos::new(),
         }
     }
 }
@@ -60,7 +75,6 @@ impl Stl {
 struct StlModel {
     n_stl_num: u64,
     stl: Vec<Stl>,
-    
 }
 
 impl StlModel {
@@ -80,7 +94,7 @@ struct Modeling {
 }
 
 struct ModelingRobo {
-    n_trans_num: u64, 
+    n_trans_num: u64,
     modeling: Vec<Modeling>,
     robo_stl_model: Vec<StlModel>,
 }
@@ -95,13 +109,6 @@ impl ModelingRobo {
     }
 }
 
-fn read_data (poly_path: &str, modeling_path: &str) -> (StlModel, ModelingRobo) {
-    (
-        read_poly(poly_path),
-        read_modeling(modeling_path)
-    )
-}
-
 fn read_poly(path: &str) -> StlModel {
     let mut stl_model = StlModel::new();
 
@@ -111,7 +118,12 @@ fn read_poly(path: &str) -> StlModel {
 
     match file_reader.read_line(&mut buf).unwrap() {
         0 => panic!("ファイル長が間違っています."),
-        _ => stl_model.n_stl_num = buf.trim().parse::<u64>().expect("列をポリゴンに変換できませんでした."),
+        _ => {
+            stl_model.n_stl_num = buf
+                .trim()
+                .parse::<u64>()
+                .expect("列をポリゴンに変換できませんでした.")
+        }
     };
     buf.clear();
 
@@ -121,7 +133,10 @@ fn read_poly(path: &str) -> StlModel {
             if file_reader.read_line(&mut buf).unwrap() == 0 {
                 panic!()
             }
-            let tmp: Vec<f64> = buf.split(',').map(|s| s.trim().parse::<f64>().unwrap()).collect();
+            let tmp: Vec<f64> = buf
+                .split(',')
+                .map(|s| s.trim().parse::<f64>().unwrap())
+                .collect();
             let tmp_pos = Pos {
                 x: tmp[0],
                 y: tmp[1],
@@ -132,8 +147,8 @@ fn read_poly(path: &str) -> StlModel {
                 0 => tmp_stl.normal_vec = tmp_pos,
                 1 | 2 | 3 => {
                     tmp_stl.pos[j - 1] = tmp_pos;
-                },
-                _ => panic!()
+                }
+                _ => panic!(),
             }
             buf.clear();
         }
@@ -148,9 +163,9 @@ fn read_modeling(path: &str) -> ModelingRobo {
 
     // modeling.txt start
     let file_to_read = File::open(path).unwrap();
-    
+
     let mut file_reader = BufReader::new(file_to_read);
-    
+
     let mut buf = String::new();
 
     file_reader.read_line(&mut buf).unwrap();
@@ -160,8 +175,11 @@ fn read_modeling(path: &str) -> ModelingRobo {
         panic!();
     }
 
-    modeling_robo.n_trans_num = buf.trim().parse::<u64>().expect("列をパーツ数に変換できませんでした.");
-    
+    modeling_robo.n_trans_num = buf
+        .trim()
+        .parse::<u64>()
+        .expect("列をパーツ数に変換できませんでした.");
+
     buf.clear();
 
     for _ in 0..modeling_robo.n_trans_num {
@@ -176,7 +194,10 @@ fn read_modeling(path: &str) -> ModelingRobo {
             match j {
                 0 => (),
                 1 | 2 | 3 => {
-                    let tmp: Vec<f64> = buf.split(',').map(|s| s.trim().parse::<f64>().unwrap()).collect();
+                    let tmp: Vec<f64> = buf
+                        .split(',')
+                        .map(|s| s.trim().parse::<f64>().unwrap())
+                        .collect();
                     let tmp_trans_param = TransParam {
                         x: tmp[0],
                         y: tmp[1],
@@ -188,20 +209,18 @@ fn read_modeling(path: &str) -> ModelingRobo {
                         3 => d_trans = tmp_trans_param,
                         _ => panic!(),
                     };
-                },
-                _ => panic!()
+                }
+                _ => panic!(),
             }
             buf.clear();
         }
 
-        modeling_robo.modeling.push(
-            Modeling { 
-                d_scale,
-                d_trans,
-                d_rotate,
-                d_trans_matrix: cal_matrix_unit(),
-            }
-        );
+        modeling_robo.modeling.push(Modeling {
+            d_scale,
+            d_trans,
+            d_rotate,
+            d_trans_matrix: cal_matrix_unit(),
+        });
     }
 
     modeling_robo
@@ -250,12 +269,12 @@ fn scale(x: &f64, y: &f64, z: &f64) -> [[f64; 4]; 4] {
     d_scale
 }
 
-fn cal_matrix_unit() -> [[f64; 4]; 4]{
+fn cal_matrix_unit() -> [[f64; 4]; 4] {
     let mut result_matrix = [[0f64; 4]; 4];
     for i in 0..4 {
         result_matrix[i][i] = 1f64;
     }
-    
+
     result_matrix
 }
 
@@ -281,8 +300,13 @@ fn cal_pos(matrix_a: &[[f64; 4]; 4], pos: &Pos) -> Pos {
             result_matrix[i] += matrix_a[i][j] * matrix_b[j];
         }
     }
-    
-    Pos { x: result_matrix[0], y: result_matrix[1], z: result_matrix[2], w: result_matrix[3] }
+
+    Pos {
+        x: result_matrix[0],
+        y: result_matrix[1],
+        z: result_matrix[2],
+        w: result_matrix[3],
+    }
 }
 
 fn cal_normal_vec(stl: &Stl) -> Pos {
@@ -298,19 +322,18 @@ fn cal_normal_vec(stl: &Stl) -> Pos {
             y: stl.pos[2].y - stl.pos[0].y,
             z: stl.pos[2].z - stl.pos[0].z,
             w: stl.pos[2].w - stl.pos[0].w,
-        }
+        },
     ];
 
-    let tmp_n_vec = 
-        Pos {
-            x: tmp_vec[0].y * tmp_vec[1].z - tmp_vec[0].z * tmp_vec[1].y,
-            y: tmp_vec[0].x * tmp_vec[1].z - tmp_vec[0].z * tmp_vec[1].x,
-            z: tmp_vec[0].x * tmp_vec[1].y - tmp_vec[0].y * tmp_vec[1].x,
-            w: 1f64,
-        };
-    
+    let tmp_n_vec = Pos {
+        x: tmp_vec[0].y * tmp_vec[1].z - tmp_vec[0].z * tmp_vec[1].y,
+        y: tmp_vec[0].x * tmp_vec[1].z - tmp_vec[0].z * tmp_vec[1].x,
+        z: tmp_vec[0].x * tmp_vec[1].y - tmp_vec[0].y * tmp_vec[1].x,
+        w: 1f64,
+    };
+
     let n_vec_len = (tmp_n_vec.x.powi(2) + tmp_n_vec.y.powi(2) + tmp_n_vec.z.powi(2)).sqrt();
-    
+
     Pos {
         x: tmp_n_vec.x / n_vec_len,
         y: tmp_n_vec.y / n_vec_len,
@@ -321,36 +344,33 @@ fn cal_normal_vec(stl: &Stl) -> Pos {
 
 fn modeling_transform(stl_model: &StlModel, modeling_robo: &mut ModelingRobo) {
     for i in 0..modeling_robo.n_trans_num as usize {
-        modeling_robo.robo_stl_model.push(
-            StlModel {
-                n_stl_num: stl_model.n_stl_num,
-                stl: Vec::new(),
-            }
-        );
+        modeling_robo.robo_stl_model.push(StlModel {
+            n_stl_num: stl_model.n_stl_num,
+            stl: Vec::new(),
+        });
 
         // 長ったらしくて可視性が悪いので可変参照して代用
         let mut trans_model = &mut modeling_robo.modeling[i];
 
-        trans_model.d_trans_matrix = 
-            shift(
-                &trans_model.d_trans.x,
-                &trans_model.d_trans.y,
-                &trans_model.d_trans.z,
-            );
+        trans_model.d_trans_matrix = shift(
+            &trans_model.d_trans.x,
+            &trans_model.d_trans.y,
+            &trans_model.d_trans.z,
+        );
 
         for j in 0..4 {
             trans_model.d_trans_matrix = match j {
                 0 => cal_matrix(
                     &trans_model.d_trans_matrix,
-                    &rotate_z(&trans_model.d_rotate.z)
+                    &rotate_z(&trans_model.d_rotate.z),
                 ),
                 1 => cal_matrix(
                     &trans_model.d_trans_matrix,
-                    &rotate_y(&trans_model.d_rotate.y)
+                    &rotate_y(&trans_model.d_rotate.y),
                 ),
                 2 => cal_matrix(
                     &trans_model.d_trans_matrix,
-                    &rotate_x(&trans_model.d_rotate.x)
+                    &rotate_x(&trans_model.d_rotate.x),
                 ),
                 3 => cal_matrix(
                     &trans_model.d_trans_matrix,
@@ -358,26 +378,23 @@ fn modeling_transform(stl_model: &StlModel, modeling_robo: &mut ModelingRobo) {
                         &trans_model.d_scale.x,
                         &trans_model.d_scale.y,
                         &trans_model.d_scale.z,
-                    )
+                    ),
                 ),
                 _ => panic!(),
             }
         }
 
         for j in 0..modeling_robo.robo_stl_model[i].n_stl_num as usize {
-            modeling_robo.robo_stl_model[i].stl.push(
-                Stl { 
-                    pos: [
-                        cal_pos(&trans_model.d_trans_matrix, &stl_model.stl[j].pos[0]),
-                        cal_pos(&trans_model.d_trans_matrix, &stl_model.stl[j].pos[1]),
-                        cal_pos(&trans_model.d_trans_matrix, &stl_model.stl[j].pos[2]),
-                    ],
-                    normal_vec: Pos::new(),
-                }
-            );
-            modeling_robo.robo_stl_model[i].stl[j].normal_vec = 
+            modeling_robo.robo_stl_model[i].stl.push(Stl {
+                pos: [
+                    cal_pos(&trans_model.d_trans_matrix, &stl_model.stl[j].pos[0]),
+                    cal_pos(&trans_model.d_trans_matrix, &stl_model.stl[j].pos[1]),
+                    cal_pos(&trans_model.d_trans_matrix, &stl_model.stl[j].pos[2]),
+                ],
+                normal_vec: Pos::new(),
+            });
+            modeling_robo.robo_stl_model[i].stl[j].normal_vec =
                 cal_normal_vec(&modeling_robo.robo_stl_model[i].stl[j]);
         }
-        
     }
 }
