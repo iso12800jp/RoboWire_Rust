@@ -23,12 +23,14 @@ fn main() {
     }
 }
 
+#[derive(Copy, Clone)]
 struct Pos {
     x: f64,
     y: f64,
     z: f64,
     w: f64,
 }
+
 
 impl Pos {
     fn new() -> Self {
@@ -49,7 +51,7 @@ struct Stl {
 impl Stl {
     fn new() -> Self {
         Stl {
-            pos: [Pos::new(), Pos::new(), Pos::new()],
+            pos: [Pos::new(); 3],
             normal_vec: Pos::new(),
         }
     }
@@ -80,13 +82,14 @@ struct Modeling {
 
 impl Modeling {
     fn new() -> Self {
+        let matrix_unit = cal_matrix_unit();
         Modeling {
-            d_scale: cal_matrix_unit(),
-            d_rotate_x: cal_matrix_unit(),
-            d_rotate_y: cal_matrix_unit(),
-            d_rotate_z: cal_matrix_unit(),
-            d_shift: cal_matrix_unit(),
-            d_trans_matrix: cal_matrix_unit(),
+            d_scale: matrix_unit,
+            d_rotate_x: matrix_unit,
+            d_rotate_y: matrix_unit,
+            d_rotate_z: matrix_unit,
+            d_shift: matrix_unit,
+            d_trans_matrix: matrix_unit,
         }
     }
 }
@@ -126,7 +129,7 @@ fn read_poly(path: &str) -> StlModel {
     buf.clear();
 
     for _ in 0..stl_model.n_stl_num {
-        let mut tmp_stl = Stl::new();
+        let mut stl = Stl::new();
         for j in 0..4 {
             if file_reader.read_line(&mut buf).unwrap() == 0 {
                 panic!()
@@ -142,15 +145,15 @@ fn read_poly(path: &str) -> StlModel {
                 w: 1f64,
             };
             match j {
-                0 => tmp_stl.normal_vec = tmp_pos,
+                0 => stl.normal_vec = tmp_pos,
                 1 | 2 | 3 => {
-                    tmp_stl.pos[j - 1] = tmp_pos;
+                    stl.pos[j - 1] = tmp_pos;
                 }
                 _ => panic!(),
             }
             buf.clear();
         }
-        stl_model.stl.push(tmp_stl);
+        stl_model.stl.push(stl);
     }
 
     stl_model
