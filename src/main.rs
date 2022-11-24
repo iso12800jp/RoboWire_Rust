@@ -41,22 +41,6 @@ impl Pos {
     }
 }
 
-struct TransParam {
-    x: f64,
-    y: f64,
-    z: f64,
-}
-
-impl TransParam {
-    fn new() -> Self {
-        TransParam {
-            x: 0f64,
-            y: 0f64,
-            z: 0f64,
-        }
-    }
-}
-
 struct Stl {
     pos: [Pos; 3],
     normal_vec: Pos,
@@ -86,10 +70,25 @@ impl StlModel {
 }
 
 struct Modeling {
-    d_scale: TransParam,
-    d_rotate: TransParam,
-    d_trans: TransParam,
+    d_scale: [[f64; 4]; 4],
+    d_rotate_x: [[f64; 4]; 4],
+    d_rotate_y: [[f64; 4]; 4],
+    d_rotate_z: [[f64; 4]; 4],
+    d_shift: [[f64; 4]; 4],
     d_trans_matrix: [[f64; 4]; 4],
+}
+
+impl Modeling {
+    fn new() -> Self {
+        Modeling {
+            d_scale: cal_matrix_unit(),
+            d_rotate_x: cal_matrix_unit(),
+            d_rotate_y: cal_matrix_unit(),
+            d_rotate_z: cal_matrix_unit(),
+            d_shift: cal_matrix_unit(),
+            d_trans_matrix: cal_matrix_unit(),
+        }
+    }
 }
 
 struct ModelingRobo {
@@ -182,9 +181,7 @@ fn read_modeling(path: &str) -> ModelingRobo {
     buf.clear();
 
     for _ in 0..modeling_robo.n_trans_num {
-        let mut d_scale = TransParam::new();
-        let mut d_rotate = TransParam::new();
-        let mut d_trans = TransParam::new();
+        let mut modeling = Modeling::new();
         for j in 0..4 {
             if file_reader.read_line(&mut buf).unwrap() == 0 {
                 panic!()
@@ -197,15 +194,15 @@ fn read_modeling(path: &str) -> ModelingRobo {
                         .split(',')
                         .map(|s| s.trim().parse::<f64>().unwrap())
                         .collect();
-                    let tmp_trans_param = TransParam {
-                        x: tmp[0],
-                        y: tmp[1],
-                        z: tmp[2],
-                    };
+
                     match j {
-                        1 => d_scale = tmp_trans_param,
-                        2 => d_rotate = tmp_trans_param,
-                        3 => d_trans = tmp_trans_param,
+                        1 => modeling.d_scale = scale(&tmp[0], &tmp[1], &tmp[2]),
+                        2 => {
+                            modeling.d_rotate_x = rotate_x(&tmp[0]);
+                            modeling.d_rotate_y = rotate_y(&tmp[1]);
+                            modeling.d_rotate_z = rotate_z(&tmp[2]);
+                        }
+                        3 => modeling.d_shift = shift(&tmp[0], &tmp[1], &tmp[2]),
                         _ => panic!(),
                     };
                 }
@@ -214,23 +211,18 @@ fn read_modeling(path: &str) -> ModelingRobo {
             buf.clear();
         }
 
-        modeling_robo.modeling.push(Modeling {
-            d_scale,
-            d_trans,
-            d_rotate,
-            d_trans_matrix: cal_matrix_unit(),
-        });
+        modeling_robo.modeling.push(modeling);
     }
 
     modeling_robo
 }
 
 fn shift(x: &f64, y: &f64, z: &f64) -> [[f64; 4]; 4] {
-    let mut d_trans = cal_matrix_unit();
-    d_trans[0][3] = *x;
-    d_trans[1][3] = *y;
-    d_trans[2][3] = *z;
-    d_trans
+    let mut d_shift = cal_matrix_unit();
+    d_shift[0][3] = *x;
+    d_shift[1][3] = *y;
+    d_shift[2][3] = *z;
+    d_shift
 }
 
 fn rotate_z(z: &f64) -> [[f64; 4]; 4] {
@@ -351,34 +343,14 @@ fn modeling_transform(stl_model: &StlModel, mut modeling_robo: ModelingRobo) -> 
         // 長ったらしくて可視性が悪いので可変参照して代用
         let mut trans_model = &mut modeling_robo.modeling[i];
 
-        trans_model.d_trans_matrix = shift(
-            &trans_model.d_trans.x,
-            &trans_model.d_trans.y,
-            &trans_model.d_trans.z,
-        );
+        trans_model.d_trans_matrix = trans_model.d_shift;
 
         for j in 0..4 {
             trans_model.d_trans_matrix = match j {
-                0 => cal_matrix(
-                    &trans_model.d_trans_matrix,
-                    &rotate_z(&trans_model.d_rotate.z),
-                ),
-                1 => cal_matrix(
-                    &trans_model.d_trans_matrix,
-                    &rotate_y(&trans_model.d_rotate.y),
-                ),
-                2 => cal_matrix(
-                    &trans_model.d_trans_matrix,
-                    &rotate_x(&trans_model.d_rotate.x),
-                ),
-                3 => cal_matrix(
-                    &trans_model.d_trans_matrix,
-                    &scale(
-                        &trans_model.d_scale.x,
-                        &trans_model.d_scale.y,
-                        &trans_model.d_scale.z,
-                    ),
-                ),
+                0 => cal_matrix(&trans_model.d_trans_matrix, &trans_model.d_rotate_z),
+                1 => cal_matrix(&trans_model.d_trans_matrix, &trans_model.d_rotate_y),
+                2 => cal_matrix(&trans_model.d_trans_matrix, &trans_model.d_rotate_x),
+                3 => cal_matrix(&trans_model.d_trans_matrix, &trans_model.d_scale),
                 _ => panic!(),
             }
         }
