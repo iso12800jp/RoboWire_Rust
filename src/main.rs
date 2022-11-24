@@ -344,16 +344,16 @@ fn modeling_transform(stl_model: &StlModel, mut modeling_robo: ModelingRobo) -> 
         });
 
         // 長ったらしくて可視性が悪いので可変参照して代用
-        let mut trans_model = &mut modeling_robo.modeling[i];
+        let mut modeling = &mut modeling_robo.modeling[i];
 
-        trans_model.d_trans_matrix = trans_model.d_shift;
+        modeling.d_trans_matrix = modeling.d_shift;
 
         for j in 0..4 {
-            trans_model.d_trans_matrix = match j {
-                0 => cal_matrix(&trans_model.d_trans_matrix, &trans_model.d_rotate_z),
-                1 => cal_matrix(&trans_model.d_trans_matrix, &trans_model.d_rotate_y),
-                2 => cal_matrix(&trans_model.d_trans_matrix, &trans_model.d_rotate_x),
-                3 => cal_matrix(&trans_model.d_trans_matrix, &trans_model.d_scale),
+            modeling.d_trans_matrix = match j {
+                0 => cal_matrix(&modeling.d_trans_matrix, &modeling.d_rotate_z),
+                1 => cal_matrix(&modeling.d_trans_matrix, &modeling.d_rotate_y),
+                2 => cal_matrix(&modeling.d_trans_matrix, &modeling.d_rotate_x),
+                3 => cal_matrix(&modeling.d_trans_matrix, &modeling.d_scale),
                 _ => panic!(),
             }
         }
@@ -361,9 +361,9 @@ fn modeling_transform(stl_model: &StlModel, mut modeling_robo: ModelingRobo) -> 
         for j in 0..modeling_robo.robo_stl_model[i].n_stl_num as usize {
             modeling_robo.robo_stl_model[i].stl.push(Stl {
                 pos: [
-                    cal_pos(&trans_model.d_trans_matrix, &stl_model.stl[j].pos[0]),
-                    cal_pos(&trans_model.d_trans_matrix, &stl_model.stl[j].pos[1]),
-                    cal_pos(&trans_model.d_trans_matrix, &stl_model.stl[j].pos[2]),
+                    cal_pos(&modeling.d_trans_matrix, &stl_model.stl[j].pos[0]),
+                    cal_pos(&modeling.d_trans_matrix, &stl_model.stl[j].pos[1]),
+                    cal_pos(&modeling.d_trans_matrix, &stl_model.stl[j].pos[2]),
                 ],
                 normal_vec: Pos::new(),
             });
