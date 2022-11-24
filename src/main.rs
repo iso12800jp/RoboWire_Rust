@@ -338,10 +338,11 @@ fn cal_normal_vec(stl: &Stl) -> Pos {
 
 fn modeling_transform(stl_model: &StlModel, mut modeling_robo: ModelingRobo) -> ModelingRobo {
     for i in 0..modeling_robo.n_trans_num as usize {
-        modeling_robo.robo_stl_model.push(StlModel {
+
+        let mut robo_stl_model = StlModel {
             n_stl_num: stl_model.n_stl_num,
             stl: Vec::new(),
-        });
+        };
 
         // 長ったらしくて可視性が悪いので可変参照して代用
         let mut modeling = &mut modeling_robo.modeling[i];
@@ -358,18 +359,20 @@ fn modeling_transform(stl_model: &StlModel, mut modeling_robo: ModelingRobo) -> 
             }
         }
 
-        for j in 0..modeling_robo.robo_stl_model[i].n_stl_num as usize {
-            modeling_robo.robo_stl_model[i].stl.push(Stl {
+        for j in 0..robo_stl_model.n_stl_num as usize {
+            let mut stl = Stl {
                 pos: [
                     cal_pos(&modeling.d_trans_matrix, &stl_model.stl[j].pos[0]),
                     cal_pos(&modeling.d_trans_matrix, &stl_model.stl[j].pos[1]),
                     cal_pos(&modeling.d_trans_matrix, &stl_model.stl[j].pos[2]),
                 ],
                 normal_vec: Pos::new(),
-            });
-            modeling_robo.robo_stl_model[i].stl[j].normal_vec =
-                cal_normal_vec(&modeling_robo.robo_stl_model[i].stl[j]);
+            };
+            stl.normal_vec = cal_normal_vec(&stl);
+
+            robo_stl_model.stl.push(stl);
         }
+        modeling_robo.robo_stl_model.push(robo_stl_model);
     }
     modeling_robo
 }
