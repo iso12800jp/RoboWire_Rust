@@ -1,6 +1,6 @@
 use std::{
     fs::File,
-    io::{BufRead, BufReader},
+    io::{BufReader, BufRead, BufWriter, Write},
 };
 
 fn main() {
@@ -9,18 +9,7 @@ fn main() {
 
     let modeling_robo = modeling_transform(&stl_model, modeling_robo);
 
-    for i in 0..modeling_robo.robo_stl_model[5].n_stl_num as usize {
-        let stl = &modeling_robo.robo_stl_model[5].stl;
-        // let stl = &stl_model.stl;
-        for j in 0..3 {
-            // print!("{:8.4}, {:8.4}, {:8.4} -> ", stl[i].pos[j].x, stl[i].pos[j].y, stl[i].pos[j].z)
-            print!(
-                "{:8.4}, {:8.4}, {:8.4} -> ",
-                stl[i].pos[j].x, stl[i].pos[j].y, stl[i].pos[j].z
-            )
-        }
-        println!("");
-    }
+    stl_out(&modeling_robo, "./modeling_robo.stl", "modeling_robo");
 }
 
 #[derive(Copy, Clone)]
@@ -30,7 +19,6 @@ struct Pos {
     z: f64,
     w: f64,
 }
-
 
 impl Pos {
     fn new() -> Self {
@@ -170,6 +158,7 @@ fn read_modeling(path: &str) -> ModelingRobo {
     let mut buf = String::new();
 
     file_reader.read_line(&mut buf).unwrap();
+    println!("{}", buf);
     buf.clear();
 
     if file_reader.read_line(&mut buf).unwrap() == 0 {
@@ -338,7 +327,6 @@ fn cal_normal_vec(stl: &Stl) -> Pos {
 
 fn modeling_transform(stl_model: &StlModel, mut modeling_robo: ModelingRobo) -> ModelingRobo {
     for i in 0..modeling_robo.n_trans_num as usize {
-
         let mut robo_stl_model = StlModel {
             n_stl_num: stl_model.n_stl_num,
             stl: Vec::new(),
@@ -375,4 +363,27 @@ fn modeling_transform(stl_model: &StlModel, mut modeling_robo: ModelingRobo) -> 
         modeling_robo.robo_stl_model.push(robo_stl_model);
     }
     modeling_robo
+}
+
+
+fn stl_out(modeling_robo: &ModelingRobo, path: &str, file_name: &str) {
+    let file_to_write = File::create(path).unwrap();
+    let mut file_writer = BufWriter::new(file_to_write);
+
+    file_writer.write(format!("solid {}\n",file_name).as_bytes()).unwrap();
+    modeling_robo.robo_stl_model.iter().for_each(
+        |s| s.stl.iter().for_each(
+            |s| {
+                file_writer.write(format!("facet normal {} {} {}\n", s.normal_vec.x, s.normal_vec.y, s.normal_vec.z).as_bytes()).unwrap(); 
+                file_writer.write(format!("outer loop\n").as_bytes()).unwrap(); 
+                s.pos.iter().for_each(
+                    |p| {file_writer.write(format!("vertex {} {} {}\n", p.x, p.y, p.z).as_bytes()).unwrap();}
+                );
+                file_writer.write(format!("endloop\n").as_bytes()).unwrap(); 
+                file_writer.write(format!("endfacet\n").as_bytes()).unwrap(); 
+            }
+        )
+    );
+    file_writer.write(format!("endsolid {}\n",file_name).as_bytes()).unwrap();
+    
 }
