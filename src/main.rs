@@ -48,8 +48,7 @@ impl Stl {
         }
     }
 
-    
-
+    /* 単位法線ベクトルを計算するメソッド */
     fn cal_normal_vec(&mut self) {
         let tmp_vec = [
             Pos {
@@ -65,17 +64,17 @@ impl Stl {
                 w: self.pos[2].w - self.pos[0].w,
             },
         ];
-    
+
         let tmp_n_vec = Pos {
             x: tmp_vec[0].y * tmp_vec[1].z - tmp_vec[0].z * tmp_vec[1].y,
             y: tmp_vec[0].x * tmp_vec[1].z - tmp_vec[0].z * tmp_vec[1].x,
             z: tmp_vec[0].x * tmp_vec[1].y - tmp_vec[0].y * tmp_vec[1].x,
             w: 1f64,
         };
-    
+
         let n_vec_len = (tmp_n_vec.x.powi(2) + tmp_n_vec.y.powi(2) + tmp_n_vec.z.powi(2)).sqrt();
-    
-        self.normal_vec =  Pos {
+
+        self.normal_vec = Pos {
             x: tmp_n_vec.x / n_vec_len,
             y: tmp_n_vec.y / n_vec_len,
             z: tmp_n_vec.z / n_vec_len,
@@ -122,6 +121,7 @@ impl Modeling {
         }
     }
 
+    /* 合成変換行列を計算する */
     fn cal_d_trans_matrix(&mut self) {
         self.d_trans_matrix = self.d_shift;
 
@@ -129,20 +129,13 @@ impl Modeling {
             self.d_trans_matrix = cal_matrix(
                 &self.d_trans_matrix,
                 match j {
-                        0 => &self.d_rotate_z,
-                        1 => &self.d_rotate_y,
-                        2 => &self.d_rotate_x,
-                        3 => &self.d_scale,
-                        _ => panic!(),
-                    }
+                    0 => &self.d_rotate_z,
+                    1 => &self.d_rotate_y,
+                    2 => &self.d_rotate_x,
+                    3 => &self.d_scale,
+                    _ => panic!(),
+                },
             )
-            // self.d_trans_matrix = match j {
-            //     0 => &self.d_rotate_z),
-            //     1 => &self.d_rotate_y),
-            //     2 => &self.d_rotate_x),
-            //     3 => &self.d_scale),
-            //     _ => panic!(),
-            // }
         }
     }
 }
@@ -219,11 +212,11 @@ fn read_modeling(path: &str) -> ModelingRobo {
     let file_to_read = File::open(path).unwrap();
 
     let mut file_reader = BufReader::new(file_to_read);
-    
+
     let mut buf = String::new();
 
     file_reader.read_line(&mut buf).unwrap();
-    
+
     buf.clear();
 
     if file_reader.read_line(&mut buf).unwrap() == 0 {
@@ -358,71 +351,31 @@ fn cal_pos(matrix_a: &[[f64; 4]; 4], pos: &Pos) -> Pos {
     }
 }
 
-// fn cal_normal_vec(stl: &Stl) -> Pos {
-//     let tmp_vec = [
-//         Pos {
-//             x: stl.pos[1].x - stl.pos[0].x,
-//             y: stl.pos[1].y - stl.pos[0].y,
-//             z: stl.pos[1].z - stl.pos[0].z,
-//             w: stl.pos[1].w - stl.pos[0].w,
-//         },
-//         Pos {
-//             x: stl.pos[2].x - stl.pos[0].x,
-//             y: stl.pos[2].y - stl.pos[0].y,
-//             z: stl.pos[2].z - stl.pos[0].z,
-//             w: stl.pos[2].w - stl.pos[0].w,
-//         },
-//     ];
-
-//     let tmp_n_vec = Pos {
-//         x: tmp_vec[0].y * tmp_vec[1].z - tmp_vec[0].z * tmp_vec[1].y,
-//         y: tmp_vec[0].x * tmp_vec[1].z - tmp_vec[0].z * tmp_vec[1].x,
-//         z: tmp_vec[0].x * tmp_vec[1].y - tmp_vec[0].y * tmp_vec[1].x,
-//         w: 1f64,
-//     };
-
-//     let n_vec_len = (tmp_n_vec.x.powi(2) + tmp_n_vec.y.powi(2) + tmp_n_vec.z.powi(2)).sqrt();
-
-//     Pos {
-//         x: tmp_n_vec.x / n_vec_len,
-//         y: tmp_n_vec.y / n_vec_len,
-//         z: tmp_n_vec.z / n_vec_len,
-//         w: tmp_n_vec.w,
-//     }
-// }
-
 fn modeling_transform(stl_model: &StlModel, mut modeling_robo: ModelingRobo) -> ModelingRobo {
-    
-    modeling_robo.modeling.iter_mut().for_each(
-        |modeling| 
-        {
-            let mut robo_stl_model = StlModel {
-                n_stl_num: stl_model.n_stl_num,
-                stl: Vec::new(),
+    modeling_robo.modeling.iter_mut().for_each(|modeling| {
+        let mut robo_stl_model = StlModel {
+            n_stl_num: stl_model.n_stl_num,
+            stl: Vec::new(),
+        };
+
+        modeling.cal_d_trans_matrix();
+
+        stl_model.stl.iter().for_each(|stl| {
+            let mut converted_stl = Stl {
+                pos: [
+                    cal_pos(&modeling.d_trans_matrix, &stl.pos[0]),
+                    cal_pos(&modeling.d_trans_matrix, &stl.pos[1]),
+                    cal_pos(&modeling.d_trans_matrix, &stl.pos[2]),
+                ],
+                normal_vec: Pos::new(),
             };
+            converted_stl.cal_normal_vec();
 
-            modeling.cal_d_trans_matrix();
+            robo_stl_model.stl.push(converted_stl);
+        });
 
-            stl_model.stl.iter().for_each(
-                |stl| 
-                {
-                    let mut converted_stl = Stl {
-                        pos: [
-                            cal_pos(&modeling.d_trans_matrix, &stl.pos[0]),
-                            cal_pos(&modeling.d_trans_matrix, &stl.pos[1]),
-                            cal_pos(&modeling.d_trans_matrix, &stl.pos[2]),
-                        ],
-                        normal_vec: Pos::new(),
-                    };
-                    converted_stl.cal_normal_vec();
-    
-                    robo_stl_model.stl.push(converted_stl);
-                }
-            );
-
-            modeling_robo.robo_stl_model.push(robo_stl_model);
-        }
-    );
+        modeling_robo.robo_stl_model.push(robo_stl_model);
+    });
 
     modeling_robo
 }
