@@ -1,6 +1,6 @@
 use std::{
     fs::File,
-    io::{BufReader, BufRead, BufWriter, Write},
+    io::{BufRead, BufReader, BufWriter, Write},
 };
 
 fn main() {
@@ -12,6 +12,9 @@ fn main() {
     stl_out(&modeling_robo, "./modeling_robo.stl", "modeling_robo");
 }
 
+/* 3次元座標を示す構造体
+   w は常に1である
+*/
 #[derive(Copy, Clone)]
 struct Pos {
     x: f64,
@@ -31,6 +34,7 @@ impl Pos {
     }
 }
 
+/* ポリゴンを持つ構造体 */
 struct Stl {
     pos: [Pos; 3],
     normal_vec: Pos,
@@ -43,8 +47,44 @@ impl Stl {
             normal_vec: Pos::new(),
         }
     }
+
+    
+
+    fn cal_normal_vec(&mut self) {
+        let tmp_vec = [
+            Pos {
+                x: self.pos[1].x - self.pos[0].x,
+                y: self.pos[1].y - self.pos[0].y,
+                z: self.pos[1].z - self.pos[0].z,
+                w: self.pos[1].w - self.pos[0].w,
+            },
+            Pos {
+                x: self.pos[2].x - self.pos[0].x,
+                y: self.pos[2].y - self.pos[0].y,
+                z: self.pos[2].z - self.pos[0].z,
+                w: self.pos[2].w - self.pos[0].w,
+            },
+        ];
+    
+        let tmp_n_vec = Pos {
+            x: tmp_vec[0].y * tmp_vec[1].z - tmp_vec[0].z * tmp_vec[1].y,
+            y: tmp_vec[0].x * tmp_vec[1].z - tmp_vec[0].z * tmp_vec[1].x,
+            z: tmp_vec[0].x * tmp_vec[1].y - tmp_vec[0].y * tmp_vec[1].x,
+            w: 1f64,
+        };
+    
+        let n_vec_len = (tmp_n_vec.x.powi(2) + tmp_n_vec.y.powi(2) + tmp_n_vec.z.powi(2)).sqrt();
+    
+        self.normal_vec =  Pos {
+            x: tmp_n_vec.x / n_vec_len,
+            y: tmp_n_vec.y / n_vec_len,
+            z: tmp_n_vec.z / n_vec_len,
+            w: tmp_n_vec.w,
+        }
+    }
 }
 
+/* ポリゴンの集合体である構造体 */
 struct StlModel {
     n_stl_num: u64,
     stl: Vec<Stl>,
@@ -59,6 +99,7 @@ impl StlModel {
     }
 }
 
+/* モデリングの変換行列を集めた構造体 */
 struct Modeling {
     d_scale: [[f64; 4]; 4],
     d_rotate_x: [[f64; 4]; 4],
@@ -78,6 +119,30 @@ impl Modeling {
             d_rotate_z: matrix_unit,
             d_shift: matrix_unit,
             d_trans_matrix: matrix_unit,
+        }
+    }
+
+    fn cal_d_trans_matrix(&mut self) {
+        self.d_trans_matrix = self.d_shift;
+
+        for j in 0..4 {
+            self.d_trans_matrix = cal_matrix(
+                &self.d_trans_matrix,
+                match j {
+                        0 => &self.d_rotate_z,
+                        1 => &self.d_rotate_y,
+                        2 => &self.d_rotate_x,
+                        3 => &self.d_scale,
+                        _ => panic!(),
+                    }
+            )
+            // self.d_trans_matrix = match j {
+            //     0 => &self.d_rotate_z),
+            //     1 => &self.d_rotate_y),
+            //     2 => &self.d_rotate_x),
+            //     3 => &self.d_scale),
+            //     _ => panic!(),
+            // }
         }
     }
 }
@@ -154,11 +219,11 @@ fn read_modeling(path: &str) -> ModelingRobo {
     let file_to_read = File::open(path).unwrap();
 
     let mut file_reader = BufReader::new(file_to_read);
-
+    
     let mut buf = String::new();
 
     file_reader.read_line(&mut buf).unwrap();
-    println!("{}", buf);
+    
     buf.clear();
 
     if file_reader.read_line(&mut buf).unwrap() == 0 {
@@ -185,7 +250,7 @@ fn read_modeling(path: &str) -> ModelingRobo {
                     let tmp: Vec<f64> = buf
                         .split(',')
                         .map(|s| s.trim().parse::<f64>().unwrap())
-                        .collect();
+                        .collect::<Vec<f64>>();
 
                     match j {
                         1 => modeling.d_scale = scale(&tmp[0], &tmp[1], &tmp[2]),
@@ -277,7 +342,8 @@ fn cal_matrix(matrix_a: &[[f64; 4]; 4], matrix_b: &[[f64; 4]; 4]) -> [[f64; 4]; 
 
 fn cal_pos(matrix_a: &[[f64; 4]; 4], pos: &Pos) -> Pos {
     let matrix_b = [pos.x, pos.y, pos.z, pos.w];
-    let mut result_matrix = [0f64; 4];
+    let mut result_matrix: [f64; 4] = [0f64; 4];
+    // let mut result_matrix: [f64; 4] =  matrix_a.iter().map(|a| a.iter().zip(matrix_b.iter()).map(|(a, b)| a * b).collect::<Vec<f64>>()).collect::<Vec<Vec<f64>>>().try_into().unwrap();
     for i in 0..4 {
         for j in 0..4 {
             result_matrix[i] += matrix_a[i][j] * matrix_b[j];
@@ -292,98 +358,106 @@ fn cal_pos(matrix_a: &[[f64; 4]; 4], pos: &Pos) -> Pos {
     }
 }
 
-fn cal_normal_vec(stl: &Stl) -> Pos {
-    let tmp_vec = [
-        Pos {
-            x: stl.pos[1].x - stl.pos[0].x,
-            y: stl.pos[1].y - stl.pos[0].y,
-            z: stl.pos[1].z - stl.pos[0].z,
-            w: stl.pos[1].w - stl.pos[0].w,
-        },
-        Pos {
-            x: stl.pos[2].x - stl.pos[0].x,
-            y: stl.pos[2].y - stl.pos[0].y,
-            z: stl.pos[2].z - stl.pos[0].z,
-            w: stl.pos[2].w - stl.pos[0].w,
-        },
-    ];
+// fn cal_normal_vec(stl: &Stl) -> Pos {
+//     let tmp_vec = [
+//         Pos {
+//             x: stl.pos[1].x - stl.pos[0].x,
+//             y: stl.pos[1].y - stl.pos[0].y,
+//             z: stl.pos[1].z - stl.pos[0].z,
+//             w: stl.pos[1].w - stl.pos[0].w,
+//         },
+//         Pos {
+//             x: stl.pos[2].x - stl.pos[0].x,
+//             y: stl.pos[2].y - stl.pos[0].y,
+//             z: stl.pos[2].z - stl.pos[0].z,
+//             w: stl.pos[2].w - stl.pos[0].w,
+//         },
+//     ];
 
-    let tmp_n_vec = Pos {
-        x: tmp_vec[0].y * tmp_vec[1].z - tmp_vec[0].z * tmp_vec[1].y,
-        y: tmp_vec[0].x * tmp_vec[1].z - tmp_vec[0].z * tmp_vec[1].x,
-        z: tmp_vec[0].x * tmp_vec[1].y - tmp_vec[0].y * tmp_vec[1].x,
-        w: 1f64,
-    };
+//     let tmp_n_vec = Pos {
+//         x: tmp_vec[0].y * tmp_vec[1].z - tmp_vec[0].z * tmp_vec[1].y,
+//         y: tmp_vec[0].x * tmp_vec[1].z - tmp_vec[0].z * tmp_vec[1].x,
+//         z: tmp_vec[0].x * tmp_vec[1].y - tmp_vec[0].y * tmp_vec[1].x,
+//         w: 1f64,
+//     };
 
-    let n_vec_len = (tmp_n_vec.x.powi(2) + tmp_n_vec.y.powi(2) + tmp_n_vec.z.powi(2)).sqrt();
+//     let n_vec_len = (tmp_n_vec.x.powi(2) + tmp_n_vec.y.powi(2) + tmp_n_vec.z.powi(2)).sqrt();
 
-    Pos {
-        x: tmp_n_vec.x / n_vec_len,
-        y: tmp_n_vec.y / n_vec_len,
-        z: tmp_n_vec.z / n_vec_len,
-        w: tmp_n_vec.w,
-    }
-}
+//     Pos {
+//         x: tmp_n_vec.x / n_vec_len,
+//         y: tmp_n_vec.y / n_vec_len,
+//         z: tmp_n_vec.z / n_vec_len,
+//         w: tmp_n_vec.w,
+//     }
+// }
 
 fn modeling_transform(stl_model: &StlModel, mut modeling_robo: ModelingRobo) -> ModelingRobo {
-    for i in 0..modeling_robo.n_trans_num as usize {
-        let mut robo_stl_model = StlModel {
-            n_stl_num: stl_model.n_stl_num,
-            stl: Vec::new(),
-        };
-
-        // 長ったらしくて可視性が悪いので可変参照して代用
-        let mut modeling = &mut modeling_robo.modeling[i];
-
-        modeling.d_trans_matrix = modeling.d_shift;
-
-        for j in 0..4 {
-            modeling.d_trans_matrix = match j {
-                0 => cal_matrix(&modeling.d_trans_matrix, &modeling.d_rotate_z),
-                1 => cal_matrix(&modeling.d_trans_matrix, &modeling.d_rotate_y),
-                2 => cal_matrix(&modeling.d_trans_matrix, &modeling.d_rotate_x),
-                3 => cal_matrix(&modeling.d_trans_matrix, &modeling.d_scale),
-                _ => panic!(),
-            }
-        }
-
-        for j in 0..robo_stl_model.n_stl_num as usize {
-            let mut stl = Stl {
-                pos: [
-                    cal_pos(&modeling.d_trans_matrix, &stl_model.stl[j].pos[0]),
-                    cal_pos(&modeling.d_trans_matrix, &stl_model.stl[j].pos[1]),
-                    cal_pos(&modeling.d_trans_matrix, &stl_model.stl[j].pos[2]),
-                ],
-                normal_vec: Pos::new(),
+    
+    modeling_robo.modeling.iter_mut().for_each(
+        |modeling| 
+        {
+            let mut robo_stl_model = StlModel {
+                n_stl_num: stl_model.n_stl_num,
+                stl: Vec::new(),
             };
-            stl.normal_vec = cal_normal_vec(&stl);
 
-            robo_stl_model.stl.push(stl);
+            modeling.cal_d_trans_matrix();
+
+            stl_model.stl.iter().for_each(
+                |stl| 
+                {
+                    let mut converted_stl = Stl {
+                        pos: [
+                            cal_pos(&modeling.d_trans_matrix, &stl.pos[0]),
+                            cal_pos(&modeling.d_trans_matrix, &stl.pos[1]),
+                            cal_pos(&modeling.d_trans_matrix, &stl.pos[2]),
+                        ],
+                        normal_vec: Pos::new(),
+                    };
+                    converted_stl.cal_normal_vec();
+    
+                    robo_stl_model.stl.push(converted_stl);
+                }
+            );
+
+            modeling_robo.robo_stl_model.push(robo_stl_model);
         }
-        modeling_robo.robo_stl_model.push(robo_stl_model);
-    }
+    );
+
     modeling_robo
 }
-
 
 fn stl_out(modeling_robo: &ModelingRobo, path: &str, file_name: &str) {
     let file_to_write = File::create(path).unwrap();
     let mut file_writer = BufWriter::new(file_to_write);
 
-    file_writer.write(format!("solid {}\n",file_name).as_bytes()).unwrap();
-    modeling_robo.robo_stl_model.iter().for_each(
-        |s| s.stl.iter().for_each(
-            |s| {
-                file_writer.write(format!("facet normal {} {} {}\n", s.normal_vec.x, s.normal_vec.y, s.normal_vec.z).as_bytes()).unwrap(); 
-                file_writer.write(format!("outer loop\n").as_bytes()).unwrap(); 
-                s.pos.iter().for_each(
-                    |p| {file_writer.write(format!("vertex {} {} {}\n", p.x, p.y, p.z).as_bytes()).unwrap();}
-                );
-                file_writer.write(format!("endloop\n").as_bytes()).unwrap(); 
-                file_writer.write(format!("endfacet\n").as_bytes()).unwrap(); 
-            }
-        )
-    );
-    file_writer.write(format!("endsolid {}\n",file_name).as_bytes()).unwrap();
-    
+    file_writer
+        .write(format!("solid {}\n", file_name).as_bytes())
+        .unwrap();
+    modeling_robo.robo_stl_model.iter().for_each(|s| {
+        s.stl.iter().for_each(|s| {
+            file_writer
+                .write(
+                    format!(
+                        "facet normal {} {} {}\n",
+                        s.normal_vec.x, s.normal_vec.y, s.normal_vec.z
+                    )
+                    .as_bytes(),
+                )
+                .unwrap();
+            file_writer
+                .write(format!("outer loop\n").as_bytes())
+                .unwrap();
+            s.pos.iter().for_each(|p| {
+                file_writer
+                    .write(format!("vertex {} {} {}\n", p.x, p.y, p.z).as_bytes())
+                    .unwrap();
+            });
+            file_writer.write(format!("endloop\n").as_bytes()).unwrap();
+            file_writer.write(format!("endfacet\n").as_bytes()).unwrap();
+        })
+    });
+    file_writer
+        .write(format!("endsolid {}", file_name).as_bytes())
+        .unwrap();
 }
